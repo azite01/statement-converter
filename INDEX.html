@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOC Statement Converter</title>
+    <style>
+        :root {
+            --boc-blue: #004494;
+            --boc-blue-hover: #003377;
+            --bg-color: #f4f7fb;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h2 { margin-top: 0; color: var(--boc-blue); font-weight: 600; }
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            background-color: #f8fafc;
+            margin-bottom: 20px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--boc-blue);
+            box-shadow: 0 0 0 3px rgba(0, 68, 148, 0.1);
+        }
+        button {
+            background-color: var(--boc-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--boc-blue-hover); }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .table-container { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #f8fafc; font-weight: 600; color: #475569; white-space: nowrap; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f1f5f9; }
+        .amount { text-align: right; font-family: monospace; }
+        .empty-state { text-align: center; padding: 40px; color: #64748b; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-controls">
+        <h2>BOC Statement to CSV Tool</h2>
+        <button id="downloadBtn" disabled onclick="downloadCSV()">Download CSV</button>
+    </div>
+
+    <textarea id="rawInput" placeholder="Paste the raw text from your BOC PDF statement here... The table below will update instantly." oninput="processText()"></textarea>
+
+    <div class="table-container">
+        <table id="resultTable">
+            <thead>
+                <tr>
+                    <th>POST DATE</th>
+                    <th>INV. DATE</th>
+                    <th>DESCRIPTION</th>
+                    <th class="amount">AMOUNT (Dr)</th>
+                    <th class="amount">AMOUNT (Cr)</th>
+                    <th class="amount">BALANCE</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="6" class="empty-state">Paste your statement text above to preview the formatted data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let parsedData = [];
+
+    function processText() {
+        const text = document.getElementById('rawInput').value;
+        const tbody = document.getElementById('tableBody');
+        const btn = document.getElementById('downloadBtn');
+        
+        if (!text.trim()) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Paste your statement text above to preview the formatted data.</td></tr>';
+            btn.disabled = true;
+            parsedData = [];
+            return;
+        }
+
+        let runningBalance = 0;
+        parsedData = [];
+        
+        // Find initial opening balance anywhere in the text block
+        const obMatch = text.match(/Opening Balance[\s\S]*?([\d,]+\.\d{2})/i) || text.match(/([\d,]+\.\d{2})[\s\S]*?Opening Balance/i);
+        if (obMatch) {
+            runningBalance = parseFloat(obMatch[1].replace(/,/g, ''));
+        }
+
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        let buffer = "";
+        const dateRegex = /\d{2}\/\d{2}\/\d{4}/g;
+        const amountRegex = /[\d,]+\.\d{2}(?:\s*CR)?/ig;
+
+        for (let i = 0; i < lines.length; i++) {
+            buffer += lines[i] + " ";
+            
+            // Determine if the NEXT line starts with a Date. If it does, our current buffer is a complete transaction.
+            let nextLineStartsWithDate = false;
+            if (i + 1 < lines.length) {
+                nextLineStartsWithDate = /^(?:")?\d{2}\/\d{2}\/\d{4}/.test(lines[i + 1]);
+            }
+            
+            if (nextLineStartsWithDate || i === lines.length - 1) {
+                let cleanBuffer = buffer.replace(/"/g, ' ').replace(/,,/g, ' ').trim();
+                
+                let dates = cleanBuffer.match(dateRegex);
+                let amounts = cleanBuffer.match(amountRegex);
+                
+                // If the buffer contains both a date and an amount, it's a valid transaction
+                if (dates && amounts && amounts.length > 0) {
+                    let postDate = dates[0];
+                    let invDate = dates.length > 1 ? dates[1] : "";
+                    
+                    let amountStr = amounts[amounts.length - 1]; // Grab the final amount in the string
+                    let isCredit = amountStr.toUpperCase().includes("CR");
+                    let cleanVal = parseFloat(amountStr.replace(/CR/i, '').replace(/,/g, '').trim());
+
+                    let dr = "";
+                    let cr = "";
+                    
+                    if (isCredit) {
+                        cr = cleanVal.toFixed(2);
+                        runningBalance -= cleanVal;
+                    } else {
+                        dr = cleanVal.toFixed(2);
+                        runningBalance += cleanVal;
+                    }
+
+                    let description = cleanBuffer
+                        .replace(postDate, '')
+                        .replace(invDate, '')
+                        .replace(amountStr, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                        
+                    // Strip leftover random punctuation from copy-pasting
+                    description = description.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
+
+                    parsedData.push({
+                        postDate, invDate, description, dr, cr, balance: runningBalance.toFixed(2)
+                    });
+                }
+                buffer = ""; // Reset buffer for the next transaction
+            }
+        }
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        const btn = document.getElementById('downloadBtn');
+        
+        if (parsedData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No valid transactions found. Make sure you copied the transaction lines from the PDF.</td></tr>';
+            btn.disabled = true;
+            return;
+        }
+
+        tbody.innerHTML = parsedData.map(row => `
+            <tr>
+                <td>${row.postDate}</td>
+                <td>${row.invDate}</td>
+                <td>${row.description}</td>
+                <td class="amount">${row.dr}</td>
+                <td class="amount">${row.cr}</td>
+                <td class="amount">${row.balance}</td>
+            </tr>
+        `).join('');
+        
+        btn.disabled = false;
+    }
+
+    function downloadCSV() {
+        if (parsedData.length === 0) return;
+
+        let csvContent = "data:text/csv;charset=utf-8,POST DATE,INV. DATE,DESCRIPTION,AMOUNT (Dr),AMOUNT (Cr),BALANCE\n";
+        
+        parsedData.forEach(row => {
+            const safeDesc = `"${row.description.replace(/"/g, '""')}"`;
+            csvContent += `${row.postDate},${row.invDate},${safeDesc},${row.dr},${row.cr},${row.balance}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "BOC_Statement.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>
