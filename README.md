@@ -1,8 +1,8 @@
-# BOC Statement to CSV Converter
+# Bank or Credit Card Statement to CSV Converter
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg)](https://azite01.github.io/statement-converter/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen.svg)](https://paskonline.github.io/statement-converter/)
 
-A lightweight, purely client-side web tool designed to quickly convert Bank of Ceylon (BOC) credit card statement PDFs into clean, formatted CSV files. 
+A lightweight, purely client-side web tool designed to quickly convert bank or credit card statement PDFs into clean, formatted CSV files. 
 
 This tool eliminates the need for manual data entry, making it perfect for rapid month-end financial reconciliation and expense tracking. It cleans up the messy, unformatted text that happens when copying directly from a PDF and automatically organizes it into structured columns.
 
@@ -22,8 +22,8 @@ This tool is built entirely with vanilla HTML, CSS, and JavaScript. There is no 
 
 ## 🚀 How to Use
 
-1. Go to the [Live Tool](https://azite01.github.io/statement-converter/).
-2. Open your BOC Bank Statement PDF.
+1. Go to the [Live Tool](https://paskonline.github.io/statement-converter/).
+2. Open your Bank Statement PDF.
 3. Select all the text in the PDF (`Ctrl + A` or `Cmd + A`) and copy it.
 4. Paste the text into the input box on the website.
 5. Verify the parsed transactions in the preview table.
@@ -36,4 +36,4 @@ This tool is built entirely with vanilla HTML, CSS, and JavaScript. There is no 
 * Vanilla JavaScript (ES6)
 
 ---
-*Note: This is an independent tool and is not officially affiliated with or endorsed by the Bank of Ceylon.*
+*Note: This is an independent tool and is not officially affiliated with or endorsed by a Bank.*
