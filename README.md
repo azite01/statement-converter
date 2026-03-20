@@ -10,7 +10,11 @@ This tool eliminates the need for manual data entry, making it perfect for rapid
 
 **Your financial data never leaves your device.** 
 
-This tool is built entirely with vanilla HTML, CSS, and JavaScript. There is no backend, no database, and no server-side processing. When you paste your statement text into the tool, all parsing and math are executed locally within your web browser's memory. Once you close the tab, the data is gone. 
+Most bank statements are provided as password-protected PDFs, which prevents direct export to Excel. To get around this, many users resort to third-party online "PDF Unlockers" or "PDF to CSV" converters, unknowingly uploading their sensitive financial data to external servers. 
+
+This tool solves that security risk. It is built entirely with vanilla HTML, CSS, and JavaScript with no backend or database. 
+
+By simply opening your password-protected PDF on your own computer, copying the text, and pasting it here, all parsing and math are executed locally within your web browser's memory. No files are uploaded, and once you close the tab, the data vanishes.
 
 ## ✨ Features
 
